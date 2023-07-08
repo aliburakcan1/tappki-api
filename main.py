@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import requests
 from env_vars import ATLAS_USERNAME, ATLAS_PASSWORD, ATLAS_DATABASE
 from pymongo import MongoClient
+import time
+import random
 
   
 app = FastAPI()  
@@ -16,12 +18,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-  
+
 class Video(BaseModel):
     tweet_id: str
+    title: str
     content: str
+    people: List[str]
+    tags: List[str]
+    program: str
+    music: str
+    animal: str
+    sport: str
     url: str
 
+class VideoResponse(BaseModel):  
+    videos: List[Video]  
+    total: int
 
 def get_tweet_html(tweet_id):
     url = "https://twitter.com/i/status/" + tweet_id
@@ -44,12 +56,12 @@ def get_db():
 
 def get_collection():
     db = get_db()
-    collection = db.annotation
+    collection = db.video
     return collection
 
 def find_all():
     collection = get_collection()
-    return collection.find({}, {"_id": 0, "tweet_id":1, "content": 1})
+    return collection.find({}, {"_id": 0})
 
 def find_one(id):
     collection = get_collection()
@@ -57,7 +69,9 @@ def find_one(id):
 
 def find_top_n(n):
     collection = get_collection()
-    return collection.find({}, {"_id": 0, "tweet_id":1, "content": 1}).limit(n)
+    return collection.find({}, {"_id":-1, "_id": 0}).limit(n)
+
+
 
 @app.get("/api/annotations", response_model=List[Video])
 def get_annotations():
@@ -67,13 +81,27 @@ def get_annotations():
         item['url'] = "https://twitter.com/i/status/" + item['tweet_id']
     return ret_val
 
-@app.get("/api/videos", response_model=List[Video])  
-def get_videos(query: str = None):
-    if query:
-        videos = list(find_all())
-        filtered_videos = [video for video in videos if query.lower() in video["content"].lower()]
-        for item in filtered_videos:
-            item['url'] = "https://twitter.com/i/status/" + item['tweet_id']  
-        return filtered_videos[:10]
-    return videos  
+
+videos = list(find_all())
+
+@app.get("/api/videos", response_model=VideoResponse)  
+def get_videos(query: str = None, page: int = 1, limit: int = 12):  
+    if query:  
+        filtered_videos = [video for video in videos if query.lower() in video["content"].lower()]  
+    else:  
+        filtered_videos = random.sample(videos, 12)
+  
+    total_videos = len(filtered_videos)  
+    start_index = (page - 1) * limit  
+    end_index = start_index + limit  
+  
+    # Slice the filtered_videos list according to the current page and limit  
+    paginated_videos = filtered_videos[start_index:end_index]  
+  
+    for item in paginated_videos:  
+        item['url'] = "https://twitter.com/i/status/" + item['tweet_id']  
+  
+    # Return the paginated videos and the total number of videos  
+    return {"videos": paginated_videos, "total": total_videos}  
+
 
