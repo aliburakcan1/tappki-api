@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import List
 from fastapi.middleware.cors import CORSMiddleware
 import requests
-from env_vars import ATLAS_USERNAME, ATLAS_PASSWORD, ATLAS_DATABASE
+from config import ATLAS_USERNAME, ATLAS_PASSWORD, ATLAS_DATABASE
 from pymongo import MongoClient
 import time
 import random
