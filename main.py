@@ -7,6 +7,7 @@ from config import ATLAS_USERNAME, ATLAS_PASSWORD, ATLAS_DATABASE
 from pymongo import MongoClient
 import time
 import random
+from video_retriever import VideoRetriever
 
   
 app = FastAPI()  
@@ -83,11 +84,13 @@ def get_annotations():
 
 
 videos = list(find_all())
+retriever = VideoRetriever("tepki", "video")
 
 @app.get("/api/videos", response_model=VideoResponse)  
-def get_videos(query: str = None, page: int = 1, limit: int = 12):  
+def get_videos(query: str = None, page: int = 1, limit: int = 12):
+
     if query:  
-        filtered_videos = [video for video in videos if query.lower() in video["content"].lower()]  
+        filtered_videos = retriever.search(query)['hits']
     else:  
         filtered_videos = random.sample(videos, 12)
   
