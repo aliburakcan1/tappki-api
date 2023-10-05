@@ -30,7 +30,3 @@ class VideoRetriever:
     def search(self, query):
         ret_val = self.msearch_index.search(query)
         return ret_val
-
-
-retriever = VideoRetriever("tepki", "video")
-print(retriever.search("gragas jumpscare lol edit"))
