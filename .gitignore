@@ -2,6 +2,6 @@ __pycache__
 .env
 .env.*
 get_annotated_videos.py
-videos.json
+videos
 data.ms
 dumps
