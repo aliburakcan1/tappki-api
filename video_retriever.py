@@ -9,7 +9,7 @@ from config import ATLAS_USERNAME, ATLAS_PASSWORD, ATLAS_DATABASE
 class VideoRetriever:
 
     def __init__(self, mongo_db, mongo_db_collection) -> None:
-        subprocess.Popen(["meilisearch.exe", "--master-key", MEILISEARCH_MASTER_KEY])
+        subprocess.Popen(["meilisearch", "--master-key", MEILISEARCH_MASTER_KEY])
         time.sleep(1)
         self.msearch_client = meilisearch.Client('http://localhost:7700', MEILISEARCH_MASTER_KEY)
         self.mongo_uri = f"mongodb+srv://{ATLAS_USERNAME}:{ATLAS_PASSWORD}@{ATLAS_DATABASE}.mongodb.net/?retryWrites=true&w=majority"
