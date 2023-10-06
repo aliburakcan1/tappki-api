@@ -1,8 +1,8 @@
 from dotenv import load_dotenv
 import os
 
-
-if os.environ.get("env") == 'prod':
+print(os.environ.get("APP_ENV"))
+if os.environ.get("APP_ENV") == 'prod':
     load_dotenv('.env.prod')
 else:
     print("dev")

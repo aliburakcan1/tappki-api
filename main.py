@@ -51,6 +51,7 @@ def get_tweet_html(tweet_id):
 
 def get_db():
     uri = f"mongodb+srv://{ATLAS_USERNAME}:{ATLAS_PASSWORD}@{ATLAS_DATABASE}.mongodb.net/?retryWrites=true&w=majority"
+    print("uri:", uri)
     client = MongoClient(uri)
     db = client.tepki
     return db
