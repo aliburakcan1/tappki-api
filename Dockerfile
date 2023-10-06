@@ -6,7 +6,7 @@ WORKDIR /app
 COPY . /app
 RUN pip install -r requirements.txt
 
-RUN curl -L https://install.meilisearch.com
+RUN apt update && apt install curl && curl -L https://install.meilisearch.com
 
 EXPOSE 8000
 
