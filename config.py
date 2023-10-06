@@ -2,11 +2,16 @@ from dotenv import load_dotenv
 import os
 
 print(os.environ.get("APP_ENV"))
-if os.environ.get("APP_ENV") == 'prod':
-    load_dotenv('.env.prod')
+print(os.environ.get("DEPLOY_ENV"))
+
+if os.environ.get("DEPLOY_ENV") == 'digitalocean':
+    pass
 else:
-    print("dev")
-    load_dotenv('.env.dev')
+    if os.environ.get("APP_ENV") == 'prod':
+        load_dotenv('.env.prod')
+    else:
+        print("dev")
+        load_dotenv('.env.dev')
 
 
 ATLAS_USERNAME = os.environ.get("ATLAS_USERNAME")
