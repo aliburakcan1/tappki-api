@@ -51,7 +51,7 @@ def get_tweet_html(tweet_id):
 
 def get_db():
     uri = f"mongodb+srv://{ATLAS_USERNAME}:{ATLAS_PASSWORD}@{ATLAS_DATABASE}.mongodb.net/?retryWrites=true&w=majority"
-    print("uri:", uri)
+    #print("uri:", uri)
     client = MongoClient(uri)
     db = client.tepki
     return db
@@ -91,7 +91,7 @@ retriever = VideoRetriever("tepki", "video")
 def get_videos(query: str = None, page: int = 1, limit: int = 12):
 
     if query:  
-        filtered_videos = retriever.search(query)['hits']
+        filtered_videos = retriever.search(query)#['hits']
     else:  
         filtered_videos = random.sample(videos, 12)
   
