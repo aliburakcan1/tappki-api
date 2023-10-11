@@ -6,9 +6,11 @@ import time
 from pymongo import MongoClient
 from config import ATLAS_USERNAME, ATLAS_PASSWORD, ATLAS_DATABASE
 import socket
+from loguru import logger
 
 class VideoRetriever:
 
+    @logger.catch
     def __init__(self, mongo_db, mongo_db_collection) -> None:
         #subprocess.Popen(["./meilisearch", f"--master-key={MEILISEARCH_MASTER_KEY}"])
         #time.sleep(1)
@@ -29,8 +31,9 @@ class VideoRetriever:
         #self.msearch_index.add_documents(self.msearch_documents)
         #print(self.msearch_client.get_task(0))
     
+    @logger.catch
     def search(self, query):
-        #ret_val = self.msearch_index.search(query)
+        logger.info(f"query is being searched: {query}")
         documents = self.mongo_db_collection.aggregate([
                 {
                         "$search": {
@@ -60,4 +63,5 @@ class VideoRetriever:
                         }
                     }
                 ])
+        #logger.info(f"documents are retrieved: {documents}")
         return list(documents)
