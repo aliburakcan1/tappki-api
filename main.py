@@ -8,8 +8,11 @@ from pymongo import MongoClient
 import time
 import random
 from video_retriever import VideoRetriever
+from loguru import logger
 
-  
+logger.add("logs/tepki.log", retention="1 day", backtrace=True, diagnose=True)
+
+
 app = FastAPI()  
 
 app.add_middleware(
@@ -36,6 +39,7 @@ class VideoResponse(BaseModel):
     videos: List[Video]  
     total: int
 
+@logger.catch
 def get_tweet_html(tweet_id):
     url = "https://twitter.com/i/status/" + tweet_id
     try:
@@ -51,8 +55,8 @@ def get_tweet_html(tweet_id):
 
 def get_db():
     uri = f"mongodb+srv://{ATLAS_USERNAME}:{ATLAS_PASSWORD}@{ATLAS_DATABASE}.mongodb.net/?retryWrites=true&w=majority"
-    #print("uri:", uri)
     client = MongoClient(uri)
+    logger.info(f"Connected to MongoDB")
     db = client.tepki
     return db
 
@@ -84,17 +88,18 @@ def get_annotations():
     return ret_val
 
 
-videos = list(find_all())
+#videos = list(find_all())
 retriever = VideoRetriever("tepki", "video")
 
 @app.get("/api/videos", response_model=VideoResponse)  
+@logger.catch
 def get_videos(query: str = None, page: int = 1, limit: int = 12):
-
-    if query:  
-        filtered_videos = retriever.search(query)#['hits']
-    else:  
-        filtered_videos = random.sample(videos, 12)
-  
+    i = 1/0
+    logger.info(f"query: {query}, page: {page}, limit: {limit}")
+    if not query:  
+        query = "lütfunda"
+    
+    filtered_videos = retriever.search(query)#['hits']
     total_videos = len(filtered_videos)  
     start_index = (page - 1) * limit  
     end_index = start_index + limit  
@@ -104,12 +109,16 @@ def get_videos(query: str = None, page: int = 1, limit: int = 12):
   
     for item in paginated_videos:  
         item['url'] = "https://twitter.com/i/status/" + item['tweet_id']  
-  
+    
+    logger.info(f"total_videos: {total_videos} paginated_videos: {len(paginated_videos)}")
+
     # Return the paginated videos and the total number of videos  
     return {"videos": paginated_videos, "total": total_videos}  
 
 @app.get("/api/get_download_link")
+@logger.catch
 def get_download_link(videoId: str):
+    logger.info(f"Asked videoId to download: {videoId}")
     user_tweet_status = videoId
     fxtwitter_headers = {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -128,12 +137,12 @@ def get_download_link(videoId: str):
     fxtwitter_url = f"https://api.fxtwitter.com/i/status/{user_tweet_status}"
     try:
         fxtwitter_response = requests.get(fxtwitter_url, headers=fxtwitter_headers)
-        print(f"status_code: {fxtwitter_response.status_code}")
         json_response = fxtwitter_response.json()
-        print(json_response)
         download_link = json_response['tweet']['media']['videos'][0]['url']
+        logger.info(f"download_link: {download_link}")
         return download_link
     except:
-        print(f"error fxtwitter_response: {fxtwitter_url}\n{fxtwitter_response.text}")
+        #print(f"error fxtwitter_response: {fxtwitter_url}\n{fxtwitter_response.text}")
+        logger.error(f"error fxtwitter_response: {fxtwitter_url}\n{fxtwitter_response.text}")
         return None
     
