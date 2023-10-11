@@ -94,7 +94,6 @@ retriever = VideoRetriever("tepki", "video")
 @app.get("/api/videos", response_model=VideoResponse)  
 @logger.catch
 def get_videos(query: str = None, page: int = 1, limit: int = 12):
-    i = 1/0
     logger.info(f"query: {query}, page: {page}, limit: {limit}")
     if not query:  
         query = "lütfunda"
