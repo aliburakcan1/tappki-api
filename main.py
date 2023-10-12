@@ -119,29 +119,8 @@ def get_videos(query: str = None, page: int = 1, limit: int = 12):
 def get_download_link(videoId: str):
     logger.info(f"Asked videoId to download: {videoId}")
     user_tweet_status = videoId
-    fxtwitter_headers = {
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-        "Accept-Language": "tr-TR,tr;q=0.9",
-        "Cache-Control": "max-age=0",
-        "Cookie": "_ga=GA1.2.1896168756.1690103315; _gid=GA1.2.249777240.1690103315",
-        "Sec-Ch-Ua": "\"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"114\", \"Google Chrome\";v=\"114\"",
-        "Sec-Ch-Ua-Mobile": "?0",
-        "Sec-Ch-Ua-Platform": "\"Windows\"",
-        "Sec-Fetch-Dest": "empty",
-        "Sec-Fetch-Mode": "cors",
-        "Sec-Fetch-Site": "cross-site",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
-    }
-
-    fxtwitter_url = f"https://api.fxtwitter.com/i/status/{user_tweet_status}"
-    try:
-        fxtwitter_response = requests.get(fxtwitter_url, headers=fxtwitter_headers)
-        json_response = fxtwitter_response.json()
-        download_link = json_response['tweet']['media']['videos'][0]['url']
-        logger.info(f"download_link: {download_link}")
-        return download_link
-    except:
-        #print(f"error fxtwitter_response: {fxtwitter_url}\n{fxtwitter_response.text}")
-        logger.error(f"error fxtwitter_response: {fxtwitter_url}\n{fxtwitter_response.text}")
-        return None
+    link_retriever = VideoRetriever("tepki", "download")
+    download_link = link_retriever.retrieve_download_link(user_tweet_status)
+    logger.info(f"download_link: {download_link}")
+    return download_link
     
