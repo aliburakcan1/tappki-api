@@ -65,3 +65,12 @@ class VideoRetriever:
                 ])
         #logger.info(f"documents are retrieved: {documents}")
         return list(documents)
+
+    @logger.catch
+    def retrieve_download_link(self, tweet_id):
+        logger.info(f"tweet_id is being asked to download: {tweet_id}")
+        # Find the tweet_id's that match the tweet_id
+        query = {"tweet_id": tweet_id}
+        projection = {"_id": 0, "download_link": 1}
+        documents = self.mongo_db_collection.find(query, projection)
+        return list(documents)[0]['download_link']
