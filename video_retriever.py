@@ -32,8 +32,8 @@ class VideoRetriever:
         #print(self.msearch_client.get_task(0))
     
     @logger.catch
-    def search(self, query):
-        logger.info(f"query is being searched: {query}")
+    def search(self, query, X_Session_Id):
+        logger.info(f"Session: {X_Session_Id} | query is being searched: {query}")
         documents = self.mongo_db_collection.aggregate([
                 {
                         "$search": {
@@ -67,8 +67,8 @@ class VideoRetriever:
         return list(documents)
 
     @logger.catch
-    def retrieve_download_link(self, tweet_id):
-        logger.info(f"tweet_id is being asked to download: {tweet_id}")
+    def retrieve_download_link(self, tweet_id, X_Session_Id):
+        logger.info(f"Session: {X_Session_Id} | tweet_id is being asked to download: {tweet_id}")
         # Find the tweet_id's that match the tweet_id
         query = {"tweet_id": tweet_id}
         projection = {"_id": 0, "download_link": 1}
