@@ -54,43 +54,8 @@ def get_tweet_html(tweet_id):
     return html
 
 
-def get_db():
-    uri = f"mongodb+srv://{ATLAS_USERNAME}:{ATLAS_PASSWORD}@{ATLAS_DATABASE}.mongodb.net/?retryWrites=true&w=majority"
-    client = MongoClient(uri)
-    logger.info(f"Connected to MongoDB")
-    db = client.tepki
-    return db
-
-def get_collection():
-    db = get_db()
-    collection = db.video
-    return collection
-
-def find_all():
-    collection = get_collection()
-    return collection.find({}, {"_id": 0})
-
-def find_one(id):
-    collection = get_collection()
-    return collection.find_one({"_id": id})
-
-def find_top_n(n):
-    collection = get_collection()
-    return collection.find({}, {"_id":-1, "_id": 0}).limit(n)
-
-
-
-@app.get("/api/annotations", response_model=List[Video])
-def get_annotations():
-    ret_val = list(find_top_n(50))
-    for item in ret_val:
-        #item['html'] = get_tweet_html(item['tweet_id'])
-        item['url'] = "https://twitter.com/i/status/" + item['tweet_id']
-    return ret_val
-
-
 #videos = list(find_all())
-retriever = VideoRetriever("tepki", "video")
+retriever = VideoRetriever("reaction", "annotation")
 
 @app.get("/api/videos", response_model=VideoResponse)  
 @logger.catch
@@ -125,3 +90,9 @@ def get_download_link(videoId: str, X_Session_Id: Annotated[str | None, Header()
     logger.info(f"Session: {X_Session_Id} | download_link: {download_link}")
     return download_link
     
+@app.get("/api/get_random_reaction")
+@logger.catch
+def get_random_reaction(X_Session_Id: Annotated[str | None, Header()] = None):
+    random_id = retriever.retrieve_random_one(X_Session_Id)
+    logger.info(f"Session: {X_Session_Id} | random_id: {random_id}")
+    return random_id

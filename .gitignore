@@ -7,4 +7,4 @@ data.ms
 dumps
 logs
 find_download_links.py
-existing_tweet_ids.json
+*.json

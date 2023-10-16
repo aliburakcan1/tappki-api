@@ -5,7 +5,7 @@ import subprocess
 import time
 from pymongo import MongoClient
 from config import ATLAS_USERNAME, ATLAS_PASSWORD, ATLAS_DATABASE
-import socket
+import random
 from loguru import logger
 
 class VideoRetriever:
@@ -37,7 +37,7 @@ class VideoRetriever:
         documents = self.mongo_db_collection.aggregate([
                 {
                         "$search": {
-                            "index": "tappki_index",
+                            "index": "reaction_index",
                             "text": {
                                 "query": query,
                                 "path": {
@@ -74,3 +74,31 @@ class VideoRetriever:
         projection = {"_id": 0, "download_link": 1}
         documents = self.mongo_db_collection.find(query, projection)
         return list(documents)[0]['download_link']
+    
+    @logger.catch
+    def retrieve_random_one(self, X_Session_Id):
+        logger.info(f"Session: {X_Session_Id} | random video is being retrieved")
+        # Find the tweet_id's that match the tweet_id
+        #query = {"title": {"$ne": ""}}
+        #projection = {"_id": 0, "tweet_id": 1, "download_link": 1}
+        #documents = self.mongo_db_collection.find(query, projection)
+        #return random.choice([i["tweet_id"] for i in list(documents)])
+        document = self.mongo_db_collection.aggregate([
+            {
+            "$sample": {
+            "size": 1
+            }
+        },
+        {
+                        "$match": {
+                            "$expr": {
+                                "$not": {
+                                    "$eq": [
+                                        "$title", ""
+                                    ]
+                                }
+                            }
+                        }
+                    },
+        ])
+        return list(document)[0]['tweet_id']
