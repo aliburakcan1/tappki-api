@@ -96,3 +96,10 @@ def get_random_reaction(X_Session_Id: Annotated[str | None, Header()] = None):
     random_id = retriever.retrieve_random_one(X_Session_Id)
     logger.info(f"Session: {X_Session_Id} | random_id: {random_id}")
     return random_id
+
+all_suggestions = open("notebooks\output\suggestions.csv", "r", encoding="utf8").read().split("\n")
+
+@app.get("/api/suggestions")
+@logger.catch
+def get_suggestions(X_Session_Id: Annotated[str | None, Header()] = None):
+    return all_suggestions
