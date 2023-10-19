@@ -1,10 +1,13 @@
 __pycache__
 .env
 .env.*
-get_annotated_videos.py
+.venv
 videos
 data.ms
 dumps
 logs
-find_download_links.py
 *.json
+notebooks
+others
+test
+.vscode
