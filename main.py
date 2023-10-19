@@ -97,7 +97,7 @@ def get_random_reaction(X_Session_Id: Annotated[str | None, Header()] = None):
     logger.info(f"Session: {X_Session_Id} | random_id: {random_id}")
     return random_id
 
-all_suggestions = open("notebooks\output\suggestions.csv", "r", encoding="utf8").read().split("\n")
+all_suggestions = open("suggestions.csv", "r", encoding="utf8").read().split("\n")
 
 @app.get("/api/suggestions")
 @logger.catch
