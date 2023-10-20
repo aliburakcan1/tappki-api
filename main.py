@@ -56,6 +56,7 @@ def get_tweet_html(tweet_id):
 
 #videos = list(find_all())
 retriever = VideoRetriever("reaction", "annotation")
+suggestions = None
 
 @app.get("/api/videos", response_model=VideoResponse)  
 @logger.catch
@@ -97,9 +98,12 @@ def get_random_reaction(X_Session_Id: Annotated[str | None, Header()] = None):
     logger.info(f"Session: {X_Session_Id} | random_id: {random_id}")
     return random_id
 
-all_suggestions = open("suggestions.csv", "r", encoding="utf8").read().split("\n")
-
 @app.get("/api/suggestions")
 @logger.catch
 def get_suggestions(X_Session_Id: Annotated[str | None, Header()] = None):
-    return all_suggestions
+    global suggestions
+    if suggestions is None:
+        suggestions = retriever.retrieve_filters()
+        suggestions = {k: list(v) for k, v in suggestions.items()}
+        logger.info(f"Session: {X_Session_Id} | suggestions: {[(k, random.sample(v, 3)) for k, v in suggestions.items()]}")
+    return suggestions

@@ -109,3 +109,30 @@ class VideoRetriever:
                     },
         ])
         return list(document)[0]['tweet_id']
+    
+    @logger.catch
+    def retrieve_filters(self):
+        logger.info(f"retrieve_filters has been called")
+        # Find the tweet_id's that match the tweet_id
+        query = {"title": {"$ne": ""}}
+        projection = {"_id": 0, "title": 0, "content": 0}
+        documents = self.mongo_db_collection.find(query, projection)
+        ret_dict = {
+            "people": set(),
+            "tags": set(),
+            "program": set(),
+            "music": set(),
+            "animal": set(),
+            "sport": set()
+        }
+        for doc in documents:
+            for k, v in doc.items():
+                if k in ret_dict.keys():
+                    if isinstance(v, list):
+                        ret_dict[k].update(set([i.strip() for i in v if (i.strip() != "") and (i != "-")]))
+                    else:
+                        if (v.strip() != "") and (v != "-"):
+                            ret_dict[k].add(v.strip())
+        #logger.info(f"retrieve_filters has been called: {ret_dict}")
+        return ret_dict
+        
