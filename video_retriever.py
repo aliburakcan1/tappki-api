@@ -11,7 +11,7 @@ from loguru import logger
 class VideoRetriever:
 
     @logger.catch
-    def __init__(self, mongo_db, mongo_db_collection) -> None:
+    def __init__(self, mongo_db, mongo_db_collection, link_retriever=False) -> None:
         #subprocess.Popen(["./meilisearch", f"--master-key={MEILISEARCH_MASTER_KEY}"])
         #time.sleep(1)
         self.msearch_client = meilisearch.Client(MEILISEARCH_HOSTNAME, MEILISEARCH_MASTER_KEY)
@@ -20,15 +20,19 @@ class VideoRetriever:
         self.mongo_client = MongoClient(self.mongo_uri)
         self.mongo_db = self.mongo_client[mongo_db]
         self.mongo_db_collection = self.mongo_db[mongo_db_collection]
-        self.mongo_db_query = {"title": {"$ne": ""}}
+        if link_retriever:
+            self.mongo_db_query = {"title": {"$ne": ""}}
+        else:
+            self.mongo_db_query = {"id": {"$ne": ""}, "download_link": {"$ne": ""}}
         self.mongo_db_sort = [("_id", -1)]
         self.mongo_db_project = {"_id": 0}
         self.mongo_db_documents = self.mongo_db_collection.find(self.mongo_db_query, sort=self.mongo_db_sort, projection=self.mongo_db_project)
         self.msearch_documents = list(self.mongo_db_documents)
         #self.index.add_documents(documents=self.msearch_documents)
-        self.msearch_client.delete_index("annotation_index")
-        self.msearch_index = self.msearch_client.index('annotation_index')
-        self.msearch_index.add_documents(self.msearch_documents)
+        if not link_retriever:
+            self.msearch_client.delete_index("annotation_index")
+            self.msearch_index = self.msearch_client.index('annotation_index')
+            self.msearch_index.add_documents(self.msearch_documents)
         #print(self.msearch_client.get_task(0))
     
     @logger.catch
@@ -77,7 +81,7 @@ class VideoRetriever:
     def retrieve_download_link(self, tweet_id, X_Session_Id):
         logger.info(f"Session: {X_Session_Id} | tweet_id is being asked to download: {tweet_id}")
         # Find the tweet_id's that match the tweet_id
-        query = {"tweet_id": tweet_id}
+        query = {"id": tweet_id}
         projection = {"_id": 0, "download_link": 1}
         documents = self.mongo_db_collection.find(query, projection)
         return list(documents)[0]['download_link']
@@ -135,4 +139,12 @@ class VideoRetriever:
                             ret_dict[k].add(v.strip())
         #logger.info(f"retrieve_filters has been called: {ret_dict}")
         return ret_dict
-        
+    
+    @logger.catch
+    def retrieve_annotation(self, tweet_id, X_Session_Id):
+        logger.info(f"Session: {X_Session_Id} | annotation is being retrieved: {tweet_id}")
+        # Find the tweet_id's that match the tweet_id
+        query = {"tweet_id": tweet_id}
+        projection = {"_id": 0, "title": 0}
+        documents = self.mongo_db_collection.find(query, projection)
+        return list(documents)[0]

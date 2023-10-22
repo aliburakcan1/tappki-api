@@ -56,6 +56,7 @@ def get_tweet_html(tweet_id):
 
 #videos = list(find_all())
 retriever = VideoRetriever("reaction", "annotation")
+link_retriever = VideoRetriever("reaction", "tweet", link_retriever=True)
 suggestions = None
 
 @app.get("/api/videos", response_model=VideoResponse)  
@@ -86,7 +87,6 @@ def get_videos(query: str = None, page: int = 1, limit: int = 12, X_Session_Id: 
 def get_download_link(videoId: str, X_Session_Id: Annotated[str | None, Header()] = None):
     logger.info(f"Session: {X_Session_Id} | Asked videoId to download: {videoId}")
     user_tweet_status = videoId
-    link_retriever = VideoRetriever("tepki", "download")
     download_link = link_retriever.retrieve_download_link(user_tweet_status, X_Session_Id)
     logger.info(f"Session: {X_Session_Id} | download_link: {download_link}")
     return download_link
@@ -107,3 +107,12 @@ def get_suggestions(X_Session_Id: Annotated[str | None, Header()] = None):
         suggestions = {k: list(v) for k, v in suggestions.items()}
         logger.info(f"Session: {X_Session_Id} | suggestions: {[(k, random.sample(v, 3)) for k, v in suggestions.items()]}")
     return suggestions
+
+@app.post("/api/get_annotation")
+@logger.catch
+def get_annotation(tweetId: dict, X_Session_Id: Annotated[str | None, Header()] = None):
+    logger.info(f"Session: {X_Session_Id} | Asked videoId for its annotation: {tweetId.get('tweet_id')}")
+    user_tweet_status = tweetId.get('tweet_id')
+    annotation = retriever.retrieve_annotation(user_tweet_status, X_Session_Id)
+    logger.info(f"Session: {X_Session_Id} | annotation: {annotation}")
+    return annotation
