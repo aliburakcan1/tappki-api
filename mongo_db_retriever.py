@@ -8,31 +8,32 @@ from config import ATLAS_USERNAME, ATLAS_PASSWORD, ATLAS_DATABASE, MEILISEARCH_M
 import random
 from loguru import logger
 
-class VideoRetriever:
+class MongoDbRetriever:
 
     @logger.catch
-    def __init__(self, mongo_db, mongo_db_collection, link_retriever=False) -> None:
-        #subprocess.Popen(["./meilisearch", f"--master-key={MEILISEARCH_MASTER_KEY}"])
-        #time.sleep(1)
-        self.msearch_client = meilisearch.Client(MEILISEARCH_HOSTNAME, MEILISEARCH_MASTER_KEY)
-        #print(self.msearch_client.version())
+    def __init__(self, mongo_db, mongo_db_collection) -> None:
         self.mongo_uri = f"mongodb+srv://{ATLAS_USERNAME}:{ATLAS_PASSWORD}@{ATLAS_DATABASE}.mongodb.net/?retryWrites=true&w=majority"
         self.mongo_client = MongoClient(self.mongo_uri)
         self.mongo_db = self.mongo_client[mongo_db]
         self.mongo_db_collection = self.mongo_db[mongo_db_collection]
-        if link_retriever:
-            self.mongo_db_query = {"title": {"$ne": ""}}
-        else:
-            self.mongo_db_query = {"id": {"$ne": ""}, "download_link": {"$ne": ""}}
-        self.mongo_db_sort = [("_id", -1)]
-        self.mongo_db_project = {"_id": 0}
-        self.mongo_db_documents = self.mongo_db_collection.find(self.mongo_db_query, sort=self.mongo_db_sort, projection=self.mongo_db_project)
-        self.msearch_documents = list(self.mongo_db_documents)
-        #self.index.add_documents(documents=self.msearch_documents)
-        if not link_retriever:
-            self.msearch_client.delete_index("annotation_index")
-            self.msearch_index = self.msearch_client.index('annotation_index')
-            self.msearch_index.add_documents(self.msearch_documents)
+        sort = [("_id", -1)]
+        projection = {"_id": 0}
+        docs = self.mongo_db_collection.find(projection=projection, sort=sort)
+        self.mongo_db_documents = list(docs)
+
+        #if link_retriever:
+        #    self.mongo_db_query = {"title": {"$ne": ""}}
+        #else:
+        #    self.mongo_db_query = {"id": {"$ne": ""}, "download_link": {"$ne": ""}}
+        #self.mongo_db_sort = [("_id", -1)]
+        #self.mongo_db_project = {"_id": 0}
+        #self.mongo_db_documents = self.mongo_db_collection.find(self.mongo_db_query, sort=self.mongo_db_sort, projection=self.mongo_db_project)
+        #self.msearch_documents = list(self.mongo_db_documents)
+        ##self.index.add_documents(documents=self.msearch_documents)
+        #if not link_retriever:
+        #    self.msearch_client.delete_index("annotation_index")
+        #    self.msearch_index = self.msearch_client.index('annotation_index')
+        #    self.msearch_index.add_documents(self.msearch_documents)
         #print(self.msearch_client.get_task(0))
     
     @logger.catch
@@ -148,3 +149,24 @@ class VideoRetriever:
         projection = {"_id": 0, "title": 0}
         documents = self.mongo_db_collection.find(query, projection)
         return list(documents)[0]
+    
+    @logger.catch
+    def retrieve_popular_videos(self, rangeFilter, X_Session_Id):
+        logger.info(f"Session: {X_Session_Id} | popular videos are being retrieved: {rangeFilter}")
+        # Find the tweet_id's that match the tweet_id
+        query = {"title": {"$ne": ""}}
+        projection = {"_id": 0, "id": 1}
+        sort = [("views", -1)]
+        documents = self.mongo_db_collection.find(query, sort=sort, projection=projection).limit(20)
+        #logger.info(f"Session: {X_Session_Id} | popular videos are being retrieved: {rangeFilter}")
+        return list(documents)
+    
+    @logger.catch
+    def filter_by_status(self, statuses, X_Session_Id):
+        logger.info(f"Session: {X_Session_Id} | filter_by_status is being called: {statuses}")
+        # Find the tweet_id's that match the tweet_id
+        query = {"title": {"$ne": ""}}
+        projection = {"_id": 0}
+        documents = self.mongo_db_collection.find(query, projection=projection)
+        documents = [i for i in documents if i['tweet_id'] in statuses]
+        return list(documents)[:9]
