@@ -41,6 +41,20 @@ class VideoResponse(BaseModel):
     videos: List[Video]  
     total: int
 
+class VideoQuery(BaseModel):
+    query: str
+    page: int
+    limit: int
+
+class SuggestionResponse(BaseModel):
+    people: List[str]
+    tags: List[str]
+    program: List[str]
+    music: List[str]
+    animal: List[str]
+    sport: List[str]
+    reaction: List[str]
+
 @logger.catch
 def get_tweet_html(tweet_id):
     url = "https://twitter.com/i/status/" + tweet_id
@@ -54,6 +68,7 @@ def get_tweet_html(tweet_id):
         html = f"<blockquote class='missing'>This tweet {url} is no longer available.</blockquote>"
     return html
 
+@logger.catch
 def mongo_db_init(db_name, collection_name):
     uri = f"mongodb+srv://{ATLAS_USERNAME}:{ATLAS_PASSWORD}@{ATLAS_DATABASE}.mongodb.net/?retryWrites=true&w=majority"
     client = MongoClient(uri)
@@ -69,19 +84,18 @@ def mongo_db_init(db_name, collection_name):
 reaction_annotation = mongo_db_init("reaction", "annotation")
 reaction_tweet = mongo_db_init("reaction", "tweet")
 m_search = MSearch(reaction_annotation)
-suggestions = None
 
-@app.get("/api/videos", response_model=VideoResponse)  
+@app.post("/api/videos", response_model=VideoResponse)
 @logger.catch
-def get_videos(query: str = None, page: int = 1, limit: int = 12, X_Session_Id: Annotated[str | None, Header()] = None):
-    logger.info(f"Session: {X_Session_Id} | query: {query}, page: {page}, limit: {limit}")
-    if not query:  
-        query = "lütfunda"
+def get_videos(params: VideoQuery, X_Session_Id: Annotated[str | None, Header()] = None):
+    logger.info(f"Session: {X_Session_Id} | query: {params.query}, page: {params.page}, limit: {params.limit}")
+    if not params.query:  
+        params.query = "lütfunda"
     
-    filtered_videos = m_search.search(query, X_Session_Id)#['hits']
+    filtered_videos = m_search.search(params.query, X_Session_Id)#['hits']
     total_videos = len(filtered_videos)  
-    start_index = (page - 1) * limit  
-    end_index = start_index + limit  
+    start_index = (params.page - 1) * params.limit  
+    end_index = start_index + params.limit  
   
     # Slice the filtered_videos list according to the current page and limit  
     paginated_videos = filtered_videos[start_index:end_index]  
@@ -92,13 +106,13 @@ def get_videos(query: str = None, page: int = 1, limit: int = 12, X_Session_Id: 
     logger.info(f"Session: {X_Session_Id} | total_videos: {total_videos} paginated_videos: {len(paginated_videos)}")
 
     # Return the paginated videos and the total number of videos  
-    return {"videos": paginated_videos, "total": total_videos}  
+    return {"videos": paginated_videos, "total": total_videos}
 
-@app.get("/api/get_download_link")
+@app.post("/api/get_download_link")
 @logger.catch
-def get_download_link(videoId: str, X_Session_Id: Annotated[str | None, Header()] = None):
-    logger.info(f"Session: {X_Session_Id} | Asked videoId to download: {videoId}")
-    user_tweet_status = videoId
+def get_download_link(params: dict, X_Session_Id: Annotated[str | None, Header()] = None):
+    logger.info(f"Session: {X_Session_Id} | Asked videoId to download: {params.get('video_id')}")
+    user_tweet_status = params.get('video_id')
     download_links = [i["download_link"] for i in reaction_tweet if i["id"] == user_tweet_status]
     download_link = download_links[0] if len(download_links) > 0 else None
     logger.info(f"Session: {X_Session_Id} | download_link: {download_link}")
@@ -111,7 +125,10 @@ def get_random_reaction(X_Session_Id: Annotated[str | None, Header()] = None):
     logger.info(f"Session: {X_Session_Id} | random_id: {random_id}")
     return random_id
 
-@app.get("/api/suggestions")
+
+suggestions = None
+
+@app.post("/api/suggestions", response_model=SuggestionResponse)
 @logger.catch
 def get_suggestions(X_Session_Id: Annotated[str | None, Header()] = None):
     global suggestions
@@ -133,7 +150,8 @@ def get_suggestions(X_Session_Id: Annotated[str | None, Header()] = None):
                         if (v.strip() != "") and (v != "-"):
                             ret_dict[k].add(v.strip())
         suggestions = {k: list(v) for k, v in ret_dict.items()}
-        logger.info(f"Session: {X_Session_Id} | suggestions: {[(k, random.sample(v, 2)) for k, v in suggestions.items()]}")
+        suggestions["reaction"] = []
+    logger.info(f"Session: {X_Session_Id} | suggestions: {[(k, random.sample(v, 2)) if len(v)>2 else (k, v) for k, v in suggestions.items()]}")
     return suggestions
 
 @app.post("/api/get_annotation")
