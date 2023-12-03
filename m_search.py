@@ -14,23 +14,23 @@ class MSearch:
         finally:
             self.msearch_client.create_index("reaction_index")
         self.msearch_index = self.msearch_client.index("reaction_index")
-        index_stats = self.msearch_index.get_stats()
-        self.number_of_documents = -1
-        for i in index_stats:
-            if i[0] == "number_of_documents":
-                self.number_of_documents = i[1]
-                break
+        #index_stats = self.msearch_index.get_stats()
+        #self.number_of_documents = -1
+        #for i in index_stats:
+        #    if i[0] == "number_of_documents":
+        #        self.number_of_documents = i[1]
+        #        break
         #if number_of_documents != len(annotations):
         self.msearch_index.add_documents(annotations)
     
     def add_documents(self, documents):
         logger.info(f"INDEX_UPDATE | Number of documents in index: {self.number_of_documents}")
         self.msearch_index.add_documents(documents)
-        index_stats = self.msearch_index.get_stats()
-        for i in index_stats:
-            if i[0] == "number_of_documents":
-                self.number_of_documents = i[1]
-                break
+        #index_stats = self.msearch_index.get_stats()
+        #for i in index_stats:
+        #    if i[0] == "number_of_documents":
+        #        self.number_of_documents = i[1]
+        #        break
         logger.info(f"INDEX_UPDATE | New documents are added. Number of documents in index: {self.number_of_documents}")
 
     @logger.catch
