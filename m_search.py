@@ -5,9 +5,14 @@ from loguru import logger
 class MSearch:
     def __init__(self, annotations):
         self.msearch_client = meilisearch.Client(MEILISEARCH_HOSTNAME, MEILISEARCH_MASTER_KEY)
-        msearch_indexes = self.msearch_client.get_raw_indexes()
-        self.msearch_client.delete_index("reaction_index")
-        self.msearch_client.create_index("reaction_index")
+        #msearch_indexes = self.msearch_client.get_raw_indexes()
+        try:
+            self.msearch_client.get_index("reaction_index")
+            self.msearch_client.delete_index("reaction_index")
+        except:
+            logger.info("Index is not found.")
+        finally:
+            self.msearch_client.create_index("reaction_index")
         self.msearch_index = self.msearch_client.index("reaction_index")
         index_stats = self.msearch_index.get_stats()
         self.number_of_documents = -1
