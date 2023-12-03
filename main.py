@@ -1,22 +1,16 @@
 from fastapi import FastAPI, Header
-from pydantic import BaseModel  
-from typing import List, Annotated
+from typing import Annotated
+from pydantic_model import Video, VideoResponse, VideoQuery, SuggestionResponse
 from fastapi.middleware.cors import CORSMiddleware
-import requests
 import time
 import random
-from mongo_db_retriever import MongoDbRetriever
 from m_search import MSearch
 from loguru import logger
-from config import ATLAS_USERNAME, ATLAS_PASSWORD, ATLAS_DATABASE
-from pymongo import MongoClient
-
+from db_handler import MongoDBHandler
+from apscheduler.schedulers.background import BackgroundScheduler
 
 logger.add("logs/tepki.log", format = "{time} | {level} | {message}" , rotation="1 day", backtrace=True, diagnose=True)
-
-
 app = FastAPI()  
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=['*'],
@@ -24,66 +18,40 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+scheduler = BackgroundScheduler()
+tweets = MongoDBHandler("reaction", "tweet").find(filter={"is_deleted": False})
+reaction_annotation = MongoDBHandler("reaction", "annotation")
+annotations = reaction_annotation.find()
+annotations = [i for i in annotations if i["tweet_id"] in [j["id"] for j in tweets]]
 
-class Video(BaseModel):
-    tweet_id: str
-    title: str
-    content: str
-    people: List[str]
-    tags: List[str]
-    program: str
-    music: str
-    animal: str
-    sport: str
-    url: str
+m_search = MSearch(annotations)
+annotation_count = len(annotations)
+logger.info(f"INITIAL | Number of documents: {annotation_count}")
 
-class VideoResponse(BaseModel):  
-    videos: List[Video]  
-    total: int
+def add_docs_to_index():
+    global annotation_count
+    new_annotation_count = reaction_annotation.count_documents()
+    logger.info(f"Number of documents: {new_annotation_count}")
+    if new_annotation_count > annotation_count:
+        new_docs = reaction_annotation.last_document(n = new_annotation_count - annotation_count)
+        m_search.add_documents(new_docs)
+        annotation_count = new_annotation_count
+        logger.info(f"INDEX_UPDATE | New documents are added. Number of documents: {new_annotation_count}")
+    else:
+        logger.info(f"INDEX_UPDATE | No new documents are added. Number of documents: {new_annotation_count}")
 
-class VideoQuery(BaseModel):
-    query: str
-    page: int
-    limit: int
+def update_variables():
+    global tweets
+    global annotations
+    tweets = MongoDBHandler("reaction", "tweet").find(filter={"is_deleted": False})
+    logger.info(f"UPDATE_VARIABLES | Tweets are updated. Number of tweets: {len(tweets)}")
+    annotations = reaction_annotation.find()
+    annotations = [i for i in annotations if i["tweet_id"] in [j["id"] for j in tweets]]
+    logger.info(f"UPDATE_VARIABLES | Annotations are updated. Number of annotations: {len(annotations)}")
 
-class SuggestionResponse(BaseModel):
-    people: List[str]
-    tags: List[str]
-    program: List[str]
-    music: List[str]
-    animal: List[str]
-    sport: List[str]
-    reaction: List[str]
-
-@logger.catch
-def get_tweet_html(tweet_id):
-    url = "https://twitter.com/i/status/" + tweet_id
-    try:
-        api = "https://publish.twitter.com/oembed?url={}".format(url)
-        print(api)
-        response = requests.get(api)
-        html = response.json()['html']
-    except:
-        print("Tweet not found. Trying again.", url)
-        html = f"<blockquote class='missing'>This tweet {url} is no longer available.</blockquote>"
-    return html
-
-@logger.catch
-def mongo_db_init(db_name, collection_name):
-    uri = f"mongodb+srv://{ATLAS_USERNAME}:{ATLAS_PASSWORD}@{ATLAS_DATABASE}.mongodb.net/?retryWrites=true&w=majority"
-    client = MongoClient(uri)
-    db = client[db_name]
-    collection = db[collection_name]
-    sort = [("_id", -1)]
-    projection = {"_id": 0}
-    docs = collection.find(projection=projection, sort=sort)
-    return list(docs)
-
-
-#videos = list(find_all())
-reaction_annotation = mongo_db_init("reaction", "annotation")
-reaction_tweet = mongo_db_init("reaction", "tweet")
-m_search = MSearch(reaction_annotation)
+scheduler.add_job(add_docs_to_index, 'interval', minutes=30)
+scheduler.add_job(update_variables, 'cron', hour=5)
+scheduler.start()
 
 @app.post("/api/videos", response_model=VideoResponse)
 @logger.catch
@@ -113,7 +81,7 @@ def get_videos(params: VideoQuery, X_Session_Id: Annotated[str | None, Header()]
 def get_download_link(params: dict, X_Session_Id: Annotated[str | None, Header()] = None):
     logger.info(f"Session: {X_Session_Id} | Asked videoId to download: {params.get('video_id')}")
     user_tweet_status = params.get('video_id')
-    download_links = [i["download_link"] for i in reaction_tweet if i["id"] == user_tweet_status]
+    download_links = [i["download_link"] for i in tweets if i["id"] == user_tweet_status]
     download_link = download_links[0] if len(download_links) > 0 else None
     logger.info(f"Session: {X_Session_Id} | download_link: {download_link}")
     return download_link
@@ -121,7 +89,7 @@ def get_download_link(params: dict, X_Session_Id: Annotated[str | None, Header()
 @app.get("/api/get_random_reaction")
 @logger.catch
 def get_random_reaction(X_Session_Id: Annotated[str | None, Header()] = None):
-    random_id = random.choice(reaction_tweet)["id"]
+    random_id = random.choice(tweets)["id"]
     logger.info(f"Session: {X_Session_Id} | random_id: {random_id}")
     return random_id
 
@@ -141,7 +109,7 @@ def get_suggestions(X_Session_Id: Annotated[str | None, Header()] = None):
             "animal": set(),
             "sport": set()
         }
-        for doc in reaction_annotation:
+        for doc in annotations:
             for k, v in doc.items():
                 if k in ret_dict.keys():
                     if isinstance(v, list):
@@ -159,8 +127,8 @@ def get_suggestions(X_Session_Id: Annotated[str | None, Header()] = None):
 def get_annotation(tweetId: dict, X_Session_Id: Annotated[str | None, Header()] = None):
     logger.info(f"Session: {X_Session_Id} | Asked videoId for its annotation: {tweetId.get('tweet_id')}")
     user_tweet_status = tweetId.get('tweet_id')
-    annotations = [i for i in reaction_annotation if i["tweet_id"] == user_tweet_status]
-    annotation = annotations[0] if len(annotations) > 0 else None
+    annotation_l = [i for i in annotations if i["tweet_id"] == user_tweet_status]
+    annotation = annotation_l[0] if len(annotation_l) > 0 else None
     logger.info(f"Session: {X_Session_Id} | annotation: {annotation}")
     return annotation
 
@@ -169,7 +137,7 @@ def get_annotation(tweetId: dict, X_Session_Id: Annotated[str | None, Header()] 
 def get_popular_videos(rangeFilter: dict, X_Session_Id: Annotated[str | None, Header()] = None):
     logger.info(f"Session: {X_Session_Id} | Asked {rangeFilter.get('range_filter')} popular videos")
     range_filter = rangeFilter.get('range_filter')
-    now = time.time() - 60*24*60*60
+    now = time.time() - 60*60*24*60
     if range_filter == "weekly":
         start_date = now- 7*24*60*60
         end_date = now
@@ -180,9 +148,9 @@ def get_popular_videos(rangeFilter: dict, X_Session_Id: Annotated[str | None, He
         start_date = now - 24*60*60
         end_date = now
     
-    popular_videos = sorted(reaction_tweet, key=lambda i: i['views'] if isinstance(i["views"], int) else 0, reverse=True)
-    popular_video_statuses = [i["id"] for i in popular_videos if (i['timestamp'] >= start_date) and (i['timestamp'] <= end_date)][:200]
-    popular_videos_annotation = [i for i in reaction_annotation if i["tweet_id"] in popular_video_statuses][:9]
+    popular_videos = sorted(tweets, key=lambda i: i['views'] if isinstance(i["views"], int) else 0, reverse=True)
+    popular_video_statuses = [i["id"] for i in popular_videos if (i['timestamp'] >= start_date) and (i['timestamp'] <= end_date)][:400]
+    popular_videos_annotation = [i for i in annotations if i["tweet_id"] in popular_video_statuses][:6]
 
     for item in popular_videos_annotation:  
         item['url'] = "https://twitter.com/i/status/" + item['tweet_id']  
