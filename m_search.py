@@ -31,7 +31,7 @@ class MSearch:
         #    if i[0] == "number_of_documents":
         #        self.number_of_documents = i[1]
         #        break
-        logger.info(f"INDEX_UPDATE | New documents are added. Number of documents in index: {self.number_of_documents}")
+        #logger.info(f"INDEX_UPDATE | New documents are added. Number of documents in index: {self.number_of_documents}")
 
     @logger.catch
     def search(self, query, X_Session_Id):
