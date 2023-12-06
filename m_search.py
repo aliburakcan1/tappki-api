@@ -24,7 +24,7 @@ class MSearch:
         self.msearch_index.add_documents(annotations)
     
     def add_documents(self, documents):
-        logger.info(f"INDEX_UPDATE | Number of documents in index: {self.number_of_documents}")
+        #logger.info(f"INDEX_UPDATE | Number of documents in index: {self.number_of_documents}")
         self.msearch_index.add_documents(documents)
         #index_stats = self.msearch_index.get_stats()
         #for i in index_stats:
