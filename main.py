@@ -119,8 +119,9 @@ def get_suggestions(X_Session_Id: Annotated[str | None, Header()] = None):
                             ret_dict[k].add(v.strip())
         suggestions = {k: list(v) for k, v in ret_dict.items()}
         suggestions["reaction"] = []
-    logger.info(f"Session: {X_Session_Id} | suggestions: {[(k, random.sample(v, 2)) if len(v)>2 else (k, v) for k, v in suggestions.items()]}")
-    return suggestions
+    ret_val = {k: random.sample(v, 2) if len(v)>2 else v for k, v in suggestions.items()}
+    logger.info(f"Session: {X_Session_Id} | suggestions: {ret_val}")
+    return ret_val
 
 @app.post("/api/get_annotation")
 @logger.catch
