@@ -113,9 +113,9 @@ def get_suggestions(X_Session_Id: Annotated[str | None, Header()] = None):
             for k, v in doc.items():
                 if k in ret_dict.keys():
                     if isinstance(v, list):
-                        ret_dict[k].update(set([i.strip() for i in v if (i.strip() != "") and (i != "-")]))
+                        ret_dict[k].update(set([i.strip() for i in v if (i.strip() != "") and (i != "-") and (i != "Yok")]))
                     else:
-                        if (v.strip() != "") and (v != "-"):
+                        if (v.strip() != "") and (v.strip() != "-") and (v.strip() != "Yok"):
                             ret_dict[k].add(v.strip())
         suggestions = {k: list(v) for k, v in ret_dict.items()}
         suggestions["reaction"] = []
@@ -132,6 +132,17 @@ def get_annotation(tweetId: dict, X_Session_Id: Annotated[str | None, Header()] 
     annotation = annotation_l[0] if len(annotation_l) > 0 else None
     logger.info(f"Session: {X_Session_Id} | annotation: {annotation}")
     return annotation
+
+@app.post("/api/get_video_details")
+@logger.catch
+def get_video_details(tweetId: dict, X_Session_Id: Annotated[str | None, Header()] = None):
+    logger.info(f"Session: {X_Session_Id} | Asked videoId for its details: {tweetId.get('tweet_id')}")
+    user_tweet_status = tweetId.get('tweet_id')
+    annotation_l = [i for i in annotations if i["tweet_id"] == user_tweet_status]
+    annotation = annotation_l[0] if len(annotation_l) > 0 else None
+    ret_val = {k:v if v not in ("Yok", "-", "", []) else None for k, v in annotation.items() if (k == "program") or (k == "music") or (k == "animal") or (k == "people")}
+    logger.info(f"Session: {X_Session_Id} | video details: {ret_val}")
+    return ret_val
 
 @app.post("/api/get_popular_videos")
 @logger.catch
