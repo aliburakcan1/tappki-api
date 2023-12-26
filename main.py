@@ -123,15 +123,15 @@ def get_suggestions(X_Session_Id: Annotated[str | None, Header()] = None):
     logger.info(f"Session: {X_Session_Id} | suggestions: {ret_val}")
     return ret_val
 
-@app.post("/api/get_annotation")
-@logger.catch
-def get_annotation(tweetId: dict, X_Session_Id: Annotated[str | None, Header()] = None):
-    logger.info(f"Session: {X_Session_Id} | Asked videoId for its annotation: {tweetId.get('tweet_id')}")
-    user_tweet_status = tweetId.get('tweet_id')
-    annotation_l = [i for i in annotations if i["tweet_id"] == user_tweet_status]
-    annotation = annotation_l[0] if len(annotation_l) > 0 else None
-    logger.info(f"Session: {X_Session_Id} | annotation: {annotation}")
-    return annotation
+##@app.post("/api/get_annotation")
+##@logger.catch
+##def get_annotation(tweetId: dict, X_Session_Id: Annotated[str | None, Header()] = None):
+##    logger.info(f"Session: {X_Session_Id} | Asked videoId for its annotation: {tweetId.get('tweet_id')}")
+##    user_tweet_status = tweetId.get('tweet_id')
+##    annotation_l = [i for i in annotations if i["tweet_id"] == user_tweet_status]
+##    annotation = annotation_l[0] if len(annotation_l) > 0 else None
+##    logger.info(f"Session: {X_Session_Id} | annotation: {annotation}")
+##    return annotation
 
 @app.post("/api/get_video_details")
 @logger.catch
