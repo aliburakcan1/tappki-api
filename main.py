@@ -76,6 +76,16 @@ def get_videos(params: VideoQuery, X_Session_Id: Annotated[str | None, Header()]
     # Return the paginated videos and the total number of videos  
     return {"videos": paginated_videos, "total": total_videos}
 
+@app.post("/api/one_reaction")
+@logger.catch
+def get_reaction_video(params: dict, X_Session_Id: Annotated[str | None, Header()] = None):
+    logger.info(f"Session: {X_Session_Id} | id for one reaction: {params.get('video_id')}")
+    user_tweet_status = params.get('video_id')
+    details = [i for i in annotations if i["tweet_id"] == user_tweet_status]
+    detail = details[0] if len(details) > 0 else None
+    logger.info(f"Session: {X_Session_Id} | detail: {detail}")
+    return detail
+
 @app.post("/api/get_download_link")
 @logger.catch
 def get_download_link(params: dict, X_Session_Id: Annotated[str | None, Header()] = None):
