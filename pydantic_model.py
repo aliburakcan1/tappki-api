@@ -16,11 +16,11 @@ class Video(BaseModel):
 class VideoResponse(BaseModel):  
     videos: List[Video]  
     total: int
+    videos_per_page: int
 
 class VideoQuery(BaseModel):
     query: str
     page: int
-    limit: int
 
 class SuggestionResponse(BaseModel):
     people: List[str]

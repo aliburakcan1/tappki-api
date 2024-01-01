@@ -53,17 +53,19 @@ scheduler.add_job(add_docs_to_index, 'interval', minutes=30)
 scheduler.add_job(update_variables, 'cron', hour=5)
 scheduler.start()
 
+videos_per_page = 5
+
 @app.post("/api/videos", response_model=VideoResponse)
 @logger.catch
 def get_videos(params: VideoQuery, X_Session_Id: Annotated[str | None, Header()] = None):
-    logger.info(f"Session: {X_Session_Id} | query: {params.query}, page: {params.page}, limit: {params.limit}")
+    logger.info(f"Session: {X_Session_Id} | query: {params.query}, page: {params.page}, videos_per_page: {videos_per_page}")
     if not params.query:  
         params.query = "lütfunda"
     
     filtered_videos = m_search.search(params.query, X_Session_Id)#['hits']
     total_videos = len(filtered_videos)  
-    start_index = (params.page - 1) * params.limit  
-    end_index = start_index + params.limit  
+    start_index = (params.page - 1) * videos_per_page
+    end_index = start_index + videos_per_page
   
     # Slice the filtered_videos list according to the current page and limit  
     paginated_videos = filtered_videos[start_index:end_index]  
@@ -74,7 +76,7 @@ def get_videos(params: VideoQuery, X_Session_Id: Annotated[str | None, Header()]
     logger.info(f"Session: {X_Session_Id} | total_videos: {total_videos} paginated_videos: {len(paginated_videos)}")
 
     # Return the paginated videos and the total number of videos  
-    return {"videos": paginated_videos, "total": total_videos}
+    return {"videos": paginated_videos, "total": total_videos, "videos_per_page": videos_per_page}
 
 @app.post("/api/one_reaction")
 @logger.catch
@@ -172,8 +174,7 @@ def get_popular_videos(rangeFilter: dict, X_Session_Id: Annotated[str | None, He
     
     popular_videos = sorted(tweets, key=lambda i: i['views'] if isinstance(i["views"], int) else 0, reverse=True)
     popular_video_statuses = [i["id"] for i in popular_videos if (i['timestamp'] >= start_date) and (i['timestamp'] <= end_date)][:400]
-    popular_videos_annotation = [i for i in annotations if i["tweet_id"] in popular_video_statuses][:6]
-
+    popular_videos_annotation = [i for i in annotations if i["tweet_id"] in popular_video_statuses][:videos_per_page]
     for item in popular_videos_annotation:  
         item['url'] = "https://twitter.com/i/status/" + item['tweet_id']  
     #logger.info(f"Session: {X_Session_Id} | popular_videos_annotation: {popular_videos_annotation}")
