@@ -178,3 +178,9 @@ def get_popular_videos(rangeFilter: dict, X_Session_Id: Annotated[str | None, He
         item['url'] = "https://twitter.com/i/status/" + item['tweet_id']  
     #logger.info(f"Session: {X_Session_Id} | popular_videos_annotation: {popular_videos_annotation}")
     return {"videos": popular_videos_annotation} 
+
+@app.post("/api/report_deleted_video")
+@logger.catch
+def report_deleted_video(resp: dict, X_Session_Id: Annotated[str | None, Header()] = None):
+    logger.info(f"Session: {X_Session_Id} | Reported deleted video: {resp.get('tweet_id')}")
+    return {"status": "OK"}
