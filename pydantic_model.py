@@ -30,3 +30,7 @@ class SuggestionResponse(BaseModel):
     animal: List[str]
     sport: List[str]
     reaction: List[str]
+
+class LastAddedQuery(BaseModel):
+    page: int
+    limit: int

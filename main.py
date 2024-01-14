@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Header
 from typing import Annotated
-from pydantic_model import Video, VideoResponse, VideoQuery, SuggestionResponse
+from pydantic_model import Video, VideoResponse, VideoQuery, SuggestionResponse, LastAddedQuery
 from fastapi.middleware.cors import CORSMiddleware
 import time
 import random
@@ -184,3 +184,23 @@ def get_popular_videos(rangeFilter: dict, X_Session_Id: Annotated[str | None, He
 def report_deleted_video(resp: dict, X_Session_Id: Annotated[str | None, Header()] = None):
     logger.info(f"Session: {X_Session_Id} | Reported deleted video: {resp.get('tweet_id')}")
     return {"status": "OK"}
+
+# Show the last added videos with pagination
+@app.post("/api/new_videos")
+@logger.catch
+def last_added_videos(params: LastAddedQuery, X_Session_Id: Annotated[str | None, Header()] = None):
+    logger.info(f"Session: {X_Session_Id} | Asked last added videos. page: {params.page}, limit: {params.limit}")
+    total_videos = len(annotations[:50])  
+    start_index = (params.page - 1) * params.limit  
+    end_index = start_index + params.limit  
+  
+    # Slice the filtered_videos list according to the current page and limit  
+    paginated_videos = annotations[start_index:end_index]  
+  
+    for item in paginated_videos:  
+        item['url'] = "https://twitter.com/i/status/" + item['tweet_id']  
+    
+    logger.info(f"Session: {X_Session_Id} | total_videos: {total_videos} paginated_videos: {len(paginated_videos)}")
+
+    # Return the paginated videos and the total number of videos  
+    return {"videos": paginated_videos, "total": total_videos}

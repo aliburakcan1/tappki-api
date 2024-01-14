@@ -17,6 +17,6 @@ class MongoDBHandler:
         projection = {"_id": 0}
         return list(self.collection.find(projection=projection, sort=sort).limit(n))
     
-    def find(self, projection={"_id": 0}, filter={}):
+    def find(self, projection={"_id": 0}, filter={}, sort=[("_id", -1)]):
         # find all documents that is_deleted field is False
-        return list(self.collection.find(filter=filter, projection=projection))
+        return list(self.collection.find(filter=filter, projection=projection, sort=sort))
