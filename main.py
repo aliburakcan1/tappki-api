@@ -49,7 +49,7 @@ def update_variables():
     annotations = [i for i in annotations if i["tweet_id"] in [j["id"] for j in tweets]]
     logger.info(f"UPDATE_VARIABLES | Annotations are updated. Number of annotations: {len(annotations)}")
 
-scheduler.add_job(add_docs_to_index, 'interval', minutes=30)
+scheduler.add_job(add_docs_to_index, 'cron', hour=4)
 scheduler.add_job(update_variables, 'cron', hour=5)
 scheduler.start()
 
