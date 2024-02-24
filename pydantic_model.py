@@ -29,7 +29,6 @@ class SuggestionResponse(BaseModel):
     music: List[str]
     animal: List[str]
     sport: List[str]
-    reaction: List[str]
 
 class LastAddedQuery(BaseModel):
     page: int
