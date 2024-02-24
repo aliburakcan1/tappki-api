@@ -12,11 +12,15 @@ class MongoDBHandler:
     def count_documents(self):
         return self.collection.count_documents({})
     
-    def last_document(self, n=1):
+    def last_documents(self, n=1):
         sort = [("_id", -1)]
         projection = {"_id": 0}
         return list(self.collection.find(projection=projection, sort=sort).limit(n))
     
-    def find(self, projection={"_id": 0}, filter={}, sort=[("_id", -1)]):
+    def find(self, projection={"_id": 0}, filter={}, sort=[("_id", -1)], limit=100):
         # find all documents that is_deleted field is False
-        return list(self.collection.find(filter=filter, projection=projection, sort=sort))
+        return list(self.collection.find(filter=filter, projection=projection, sort=sort).limit(limit))
+    
+    # A function to sample random documents from the collection, Filter is optional and is_deleted field is False by default
+    def random_sample(self, filter={"is_deleted": False}, limit=100):
+        return list(self.collection.aggregate([{"$match": filter}, {"$sample": {"size": limit}}]))
