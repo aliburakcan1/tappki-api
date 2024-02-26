@@ -12,6 +12,9 @@ class MongoDBHandler:
     def count_documents(self):
         return self.collection.count_documents({})
     
+    def count_deleted_documents(self):
+        return self.collection.count_documents({"is_deleted": True})
+    
     def last_documents(self, n=1):
         sort = [("_id", -1)]
         projection = {"_id": 0}

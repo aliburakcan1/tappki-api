@@ -22,44 +22,44 @@ scheduler = BackgroundScheduler()
 tweets = MongoDBHandler("reaction", "tweet")
 reaction_annotation = MongoDBHandler("reaction", "annotation")
 annotation_count = reaction_annotation.count_documents()
-#annotations = reaction_annotation.find()
-#annotations = [i for i in annotations if i["tweet_id"] in [j["id"] for j in tweets]]
-
+logger.info(f"INITIAL_COUNT | annotation count: {annotation_count}")
+deleted_count = tweets.count_deleted_documents()
+logger.info(f"INITIAL_COUNT | deleted count: {deleted_count}")
+deleted_tweets = tweets.find(
+    filter={"is_deleted": True},
+    projection={"_id": 0, "id": 1},
+    limit=1000000000
+)
 m_search = MSearch("reaction_index")
-
-#def add_docs_to_index():
-#    global annotation_count
-#    new_annotation_count = reaction_annotation.count_documents()
-#    logger.info(f"Number of documents: {new_annotation_count}")
-#    if new_annotation_count > annotation_count:
-#        new_docs = reaction_annotation.last_document(n = new_annotation_count - annotation_count)
-#        m_search.add_documents(new_docs)
-#        annotation_count = new_annotation_count
-#        logger.info(f"INDEX_UPDATE | New documents are added. Number of documents: {new_annotation_count}")
-#    else:
-#        logger.info(f"INDEX_UPDATE | No new documents are added. Number of documents: {new_annotation_count}")
-#
-#def update_variables():
-#    global tweets
-#    global annotations
-#    tweets = MongoDBHandler("reaction", "tweet").find(filter={"is_deleted": False})
-#    logger.info(f"UPDATE_VARIABLES | Tweets are updated. Number of tweets: {len(tweets)}")
-#    annotations = reaction_annotation.find()
-#    annotations = [i for i in annotations if i["tweet_id"] in [j["id"] for j in tweets]]
-#    logger.info(f"UPDATE_VARIABLES | Annotations are updated. Number of annotations: {len(annotations)}")
 
 def update_index():
     global annotation_count
-    if reaction_annotation.count_documents() > annotation_count:
+    global deleted_count
+    global deleted_tweets
+
+    new_annotation_count = reaction_annotation.count_documents()
+    new_deleted_count = tweets.count_deleted_documents()
+
+    if new_annotation_count > annotation_count:
         m_search.update_index(reaction_annotation)
-        annotation_count = reaction_annotation.count_documents()
+        annotation_count = new_annotation_count
         logger.info(f"INDEX_UPDATE | New documents are added. Number of documents: {annotation_count}")
+    
+    if new_deleted_count > deleted_count:
+        deleted_count = new_deleted_count
+        deleted_tweets = tweets.find(
+            filter={"is_deleted": True},
+            projection={"_id": 0, "id": 1},
+            limit=1000000000
+        )
+        #m_search.delete_documents_by_filter([i["id"] for i in deleted_tweets])
+        logger.info(f"INDEX_UPDATE | Deleted documents are updated. Number of deleted documents: {deleted_count}")
 
 #scheduler.add_job(add_docs_to_index, 'cron', hour=4)
 #scheduler.add_job(update_variables, 'cron', hour=5)
 # 30 min interval
 #m_search.update_index(reaction_annotation)
-scheduler.add_job(update_index, trigger='interval', minutes=5)
+scheduler.add_job(update_index, trigger='interval', minutes=1)
 scheduler.start()
 
 @app.post("/api/videos", response_model=VideoResponse)
@@ -70,6 +70,7 @@ def get_videos(params: VideoQuery, X_Session_Id: Annotated[str | None, Header()]
         params.query = "lütfunda"
     
     filtered_videos = m_search.search(params.query, X_Session_Id)#['hits']
+    filtered_videos = [i for i in filtered_videos if i["tweet_id"] not in [j["id"] for j in deleted_tweets]]
     total_videos = len(filtered_videos)  
     start_index = (params.page - 1) * params.limit  
     end_index = start_index + params.limit  
@@ -190,16 +191,17 @@ def get_video_details(tweetId: dict, X_Session_Id: Annotated[str | None, Header(
 def get_popular_videos(rangeFilter: dict, X_Session_Id: Annotated[str | None, Header()] = None):
     logger.info(f"Session: {X_Session_Id} | Asked {rangeFilter.get('range_filter')} popular videos")
     range_filter = rangeFilter.get('range_filter')
-    now = time.time() - 60*60*24*30
-    if range_filter == "weekly":
-        start_date = now- 7*24*60*60
-        end_date = now
-    elif range_filter == "monthly":
-        start_date = now - 30*24*60*60
-        end_date = now
-    elif range_filter == "daily":
+    now = time.time() - 60*60*24*7
+    if range_filter == "daily":
         start_date = now - 24*60*60
         end_date = now
+    if range_filter == "weekly":
+        start_date = now - 7*24*60*60
+        end_date = now
+    if range_filter == "monthly":
+        start_date = now - 30*24*60*60
+        end_date = now
+    
     
     #popular_videos = sorted(tweets, key=lambda i: i['views'] if isinstance(i["views"], int) else 0, reverse=True)
     #popular_video_statuses = [i["id"] for i in popular_videos if (i['timestamp'] >= start_date) and (i['timestamp'] <= end_date)][:400]
