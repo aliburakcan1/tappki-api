@@ -13,8 +13,13 @@ class Video(BaseModel):
     sport: str
     url: str
 
+class MainVideo(BaseModel):
+    tweet_id: str
+    title: str
+    url: str
+
 class VideoResponse(BaseModel):  
-    videos: List[Video]  
+    videos: List[MainVideo]  
     total: int
 
 class VideoQuery(BaseModel):
