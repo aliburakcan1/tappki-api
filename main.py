@@ -8,6 +8,7 @@ from m_search import MSearch
 from loguru import logger
 from db_handler import MongoDBHandler
 from apscheduler.schedulers.background import BackgroundScheduler
+from util_functions import censor_profanity
 
 logger.add("logs/tepki.log", format = "{time} | {level} | {message}", rotation="1 day", backtrace=True, diagnose=True)
 app = FastAPI()  
@@ -77,7 +78,7 @@ def get_videos(params: VideoQuery, X_Session_Id: Annotated[str | None, Header()]
   
     # Slice the filtered_videos list according to the current page and limit  
     paginated_videos = filtered_videos[start_index:end_index]  
-    paginated_videos = [dict(tweet_id=video["tweet_id"], title=video["title"]) for video in paginated_videos]  
+    paginated_videos = [dict(tweet_id=video["tweet_id"], title=censor_profanity(video["title"])) for video in paginated_videos]  
     for item in paginated_videos:  
         item['url'] = "https://twitter.com/i/status/" + item['tweet_id']  
 
@@ -94,7 +95,7 @@ def get_reaction_video(params: dict, X_Session_Id: Annotated[str | None, Header(
     #details = [i for i in annotations if i["tweet_id"] == user_tweet_status]
     details = reaction_annotation.find(filter={"tweet_id": user_tweet_status})
     detail = details[0] if len(details) > 0 else None
-    detail = dict(tweet_id=detail["tweet_id"], title=detail["title"])
+    detail = dict(tweet_id=detail["tweet_id"], title=censor_profanity(detail["title"]))
     logger.info(f"Session: {X_Session_Id} | detail: {detail}")
     return detail
 
@@ -224,7 +225,7 @@ def get_popular_videos(rangeFilter: dict, X_Session_Id: Annotated[str | None, He
         },
         projection={"_id": 0}
     )
-    popular_videos_annotation = [dict(tweet_id=video["tweet_id"], title=video["title"]) for video in popular_videos_annotation]
+    popular_videos_annotation = [dict(tweet_id=video["tweet_id"], title=censor_profanity(video["title"])) for video in popular_videos_annotation]
     
     for item in popular_videos_annotation:  
         item['url'] = "https://twitter.com/i/status/" + item['tweet_id']  
@@ -246,7 +247,7 @@ def last_added_videos(params: LastAddedQuery, X_Session_Id: Annotated[str | None
   
     # Slice the filtered_videos list according to the current page and limit  
     paginated_videos = last_videos[start_index:end_index]
-    paginated_videos = [dict(tweet_id=video["tweet_id"], title=video["title"]) for video in paginated_videos]
+    paginated_videos = [dict(tweet_id=video["tweet_id"], title=censor_profanity(video["title"])) for video in paginated_videos]
   
     for item in paginated_videos:  
         item['url'] = "https://twitter.com/i/status/" + item['tweet_id']  
