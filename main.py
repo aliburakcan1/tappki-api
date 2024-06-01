@@ -9,6 +9,7 @@ from loguru import logger
 from db_handler import MongoDBHandler
 from apscheduler.schedulers.background import BackgroundScheduler
 from util_functions import censor_profanity
+from collections import Counter
 
 logger.add("logs/tepki.log", format = "{time} | {level} | {message}", rotation="1 day", backtrace=True, diagnose=True)
 app = FastAPI()  
@@ -32,11 +33,21 @@ deleted_tweets = tweets.find(
     limit=1000000000
 )
 m_search = MSearch("reaction_index")
+suggestions = {
+            "people": ["Fatih Terim", "Şenol Güneş", "Cemre Demirel", "Sagopa Kajmer", "Okan Buruk", "Erman Toroğlu"],
+            "tags": ["Bilim", "Tepki", "Edit", "Tarih", "Spor", "Mimari"],
+            "program": ["Survivor", "Kurtlar Vadisi", "Sokak Röportajları", "Yaprak Dökümü", "Beyaz Futbol"],
+            "music": ["Nasimi (Live) - Sami Yusuf", "Sakladığın Bir Şeyler Var - Dedüblüman", "Mesafe - Serdar Ortaç", "Kerosene - Crystal Castles", "Another Love - Tom Odell", "Aşkın Olayım - Simge"],
+            "animal": ["Kedi", "Eşek", "Ayı", "Köpek", "Keçi", "Tavşan"],
+            "sport": ["Futbol", "Boks", "Formula 1", "UFC"],
+        }
+
 
 def update_index():
     global annotation_count
     global deleted_count
     global deleted_tweets
+    global suggestions
 
     new_annotation_count = reaction_annotation.count_documents()
     new_deleted_count = tweets.count_deleted_documents()
@@ -45,6 +56,27 @@ def update_index():
         m_search.update_index(reaction_annotation)
         annotation_count = new_annotation_count
         logger.info(f"INDEX_UPDATE | New documents are added. Number of documents: {annotation_count}")
+
+        last_annotations = {
+            "people": [],
+            "tags": [],
+            "program": [],
+            "music": [],
+            "animal": [],
+            "sport": []
+        }
+        for annotation in reaction_annotation.find(limit=100):
+            for k, v in annotation.items():
+                if k in last_annotations.keys():
+                    if isinstance(v, list):
+                        last_annotations[k].extend([i.strip() for i in v if (i.strip() != "") and (i != "-") and (i != "Yok")])
+                    else:
+                        if (v.strip() != "") and (v.strip() != "-") and (v.strip() != "Yok"):
+                            last_annotations[k].append(v.strip())
+
+        # Count annotations and find most frequent 10 items for each category
+        suggestions = {k: [i[0] for i in Counter(v).most_common(10)] for k, v in last_annotations.items()}
+        #logger.info(f"INDEX_UPDATE | Suggestions are updated. Suggestions: {suggestions}")
     
     if new_deleted_count > deleted_count:
         deleted_count = new_deleted_count
@@ -123,41 +155,10 @@ def get_random_reaction(X_Session_Id: Annotated[str | None, Header()] = None):
     logger.info(f"Session: {X_Session_Id} | random_id: {random_id}")
     return random_id
 
-suggestions = None
 
 @app.post("/api/suggestions", response_model=SuggestionResponse)
 @logger.catch
-def get_suggestions(X_Session_Id: Annotated[str | None, Header()] = None):
-    global suggestions
-    if suggestions is None:
-        #ret_dict = {
-        #    "people": set(),
-        #    "tags": set(),
-        #    "program": set(),
-        #    "music": set(),
-        #    "animal": set(),
-        #    "sport": set()
-        #}
-        #for doc in annotations:
-        #    for k, v in doc.items():
-        #        if k in ret_dict.keys():
-        #            if isinstance(v, list):
-        #                ret_dict[k].update(set([i.strip() for i in v if (i.strip() != "") and (i != "-") and (i != "Yok")]))
-        #            else:
-        #                if (v.strip() != "") and (v.strip() != "-") and (v.strip() != "Yok"):
-        #                    ret_dict[k].add(v.strip())
-        #suggestions = {k: list(v) for k, v in ret_dict.items()}
-        #suggestions["reaction"] = []
-
-        suggestions = {
-            "people": ["Fatih Terim", "Şenol Güneş", "Cemre Demirel", "Sagopa Kajmer", "Okan Buruk", "Erman Toroğlu"],
-            "tags": ["Bilim", "Tepki", "Edit", "Tarih", "Spor", "Mimari"],
-            "program": ["Survivor", "Kurtlar Vadisi", "Sokak Röportajları", "Yaprak Dökümü", "Beyaz Futbol"],
-            "music": ["Nasimi (Live) - Sami Yusuf", "Sakladığın Bir Şeyler Var - Dedüblüman", "Mesafe - Serdar Ortaç", "Kerosene - Crystal Castles", "Another Love - Tom Odell", "Aşkın Olayım - Simge"],
-            "animal": ["Kedi", "Eşek", "Ayı", "Köpek", "Keçi", "Tavşan"],
-            "sport": ["Futbol", "Boks", "Formula 1", "UFC"],
-        }
-
+def get_suggestions(X_Session_Id: Annotated[str | None, Header()] = None):        
     ret_val = {k: random.sample(v, 2) if len(v)>2 else v for k, v in suggestions.items()}
     logger.info(f"Session: {X_Session_Id} | suggestions: {ret_val}")
     return ret_val
