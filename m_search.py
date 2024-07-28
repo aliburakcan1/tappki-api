@@ -28,7 +28,8 @@ class MSearch:
     
     def add_documents(self, documents):
         #logger.info(f"INDEX_UPDATE | Number of documents in index: {self.number_of_documents}")
-        self.msearch_index.add_documents(documents)
+        for doc in documents:
+            self.msearch_index.add_documents([doc])
         #index_stats = self.msearch_index.get_stats()
         #for i in index_stats:
         #    if i[0] == "number_of_documents":
